@@ -4,6 +4,7 @@ import torch
 import numpy as np
 from cs336_basics.model import BasicsTransformerLM
 from cs336_basics.nn_utils import cross_entropy
+from cs336_basics.optimizer import AdamW
 
 args = argparse.ArgumentParser(description="Benchmark the BasicsTransformerLM model.")
 
@@ -17,7 +18,7 @@ args.add_argument("--rope_theta", type=float, default=10000.0, help="Theta value
 args.add_argument("--batch_size", type=int, default=4, help="Batch size")
 args.add_argument("--num_steps", type=int, default=10, help="The total steps for execution")
 args.add_argument("--type", type=str, default="f", help="forward or forward+backward")
-args.add_argument("--num_warmups", type=int, default=10, help="The total steps for execution")
+args.add_argument("--num_warmups", type=int, default=5, help="The total steps for warm-up")
 
 args = args.parse_args()
 
@@ -40,6 +41,7 @@ model = BasicsTransformerLM(
     d_ff=args.d_ff,
     rope_theta=args.rope_theta
 ).to(device)
+optimizer = AdamW(model.parameters())
 
 input_data = torch.randint(low=0, high=args.vocab_size, size=(args.batch_size, args.context_length), device=device)
 target = torch.randint(low=0, high=args.vocab_size, size=(args.batch_size, args.context_length), device=device)
@@ -56,6 +58,7 @@ def run_model(model, input_data, target, type):
         loss = cross_entropy(out, target)
         loss.backward()
         model.zero_grad()
+        optimizer.step()
     sync_device()
 
 for _ in range(args.num_warmups):
