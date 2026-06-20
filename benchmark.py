@@ -67,10 +67,18 @@ for _ in range(args.num_warmups):
 sync_device()
 
 step_time = []
+# Start recording memory history.
+torch.cuda.memory._record_memory_history(max_entries=1000000)
 for _ in range(args.num_steps):
     start = timeit.default_timer()
     run_model(model, input_data, target, args.type)
     end = timeit.default_timer()
     step_time.append(end - start)
+
+# Save a pickle file to be loaded by PyTorch's online tool.
+torch.cuda.memory._dump_snapshot("memory_snapshot.pickle")
+
+# Stop recording history.
+torch.cuda.memory._record_memory_history(enabled=None)
 
 print(np.mean(step_time), np.std(step_time))
